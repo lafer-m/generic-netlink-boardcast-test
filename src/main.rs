@@ -1,4 +1,11 @@
 use std::error::Error;
+use std::fs::File;
+#[macro_use] extern crate nix;
+#[cfg(unix)]
+use std::os::unix::io::{AsRawFd, RawFd};
+
+use std::ffi::{CStr,CString};
+use std::os::raw::c_void;
 
 // #[cfg(feature = "async")]
 use neli::socket::tokio::NlSocket;
@@ -36,6 +43,8 @@ impl neli::consts::genl::NlAttrType for LinkAgentAttr {}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // println!("Hello, world!");
+    open_dacs_d()?;
+    println!("open the dacs_d");
     let mut sock = NlSocketHandle::connect(NlFamily::Generic, Some(0), &[])?;
 
     let family_id = sock.resolve_nl_mcast_group(GENL_NAME, GENL_GROUP_NAME)?;
@@ -59,5 +68,44 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+    Ok(())
+}
+
+
+const DACS_DEV_MAGIC: u8 = 'a' as u8;
+const DACS_DEV_SET_IFF: u8 = 'a' as u8;
+ioctl_write_ptr!(dacs_key_write, DACS_DEV_MAGIC, DACS_DEV_SET_IFF,  u64);
+
+
+fn open_dacs_d() ->Result<(),Box<dyn Error>> {
+    let write_str = Box::new("abcdefghikabcdefghikabcdefghikabcdefghikabcdefghikabcdefghikabcd".to_string());
+    // let str_ptr = Box::into_raw(write_str);
+    // let write_str = match write_str {
+    //     Ok(s) => s,
+    //     Err(e) => return Err(Box::new(e)),
+    // };
+
+    // println!("{:#?}", &write_str as *const u32)
+          
+    // println!("{:?}", &writeStr);
+    // write_str.as_ptr()
+
+    let f = File::open("/dev/dacs_d");
+    let dacs_dev  = match f {
+        Ok(d) => d,
+        Err(e) => return Err(Box::new(e)),
+    };
+
+    
+    let fd = dacs_dev.as_raw_fd();
+    
+    unsafe {
+       
+       let ret = dacs_key_write(fd, write_str.as_ptr() as *const u64);
+       match ret {
+           Ok(_) => return Ok(()),
+           Err(e) => println!("call ioctl err:  {}", e),
+       }
+    };
     Ok(())
 }

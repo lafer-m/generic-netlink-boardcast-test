@@ -3,7 +3,8 @@ obj-m += link_agent.o
 
 link_agent-objs := \
 	link_agent_test.o \
-	netlink.o
+	netlink.o \
+	cudev.o
 
 # add our custom header file
 # EXTRA_CFLAGS=-I$(PWD)/../include/s

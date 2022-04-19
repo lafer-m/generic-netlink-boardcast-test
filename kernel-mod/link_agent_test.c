@@ -6,6 +6,7 @@
 
 #include "link_agent_test.h"
 #include "netlink.h"
+#include "cudev.h"
 
 
 // log macro
@@ -15,21 +16,28 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-
-
 static int __init link_agent_mod_init(void) {
     pr_info("Link agent started");
     int ret;
     // init generic netlink
+
+    ret = dacs_dev_init();
+    if (ret < 0) {
+        goto err_genetlink;
+    }
+
     ret = agent_genetlink_init();
     if (ret < 0) {
         goto err_genetlink;
     }
 
+    
+
     return 0;
 
 err_genetlink:
     agent_genetlink_uninit();
+    dacs_dev_uninit();
     return ret;
 }
 
@@ -37,6 +45,7 @@ err_genetlink:
 static void __exit link_agent_mod_exit(void) {
     pr_info("Link agent ended");
     agent_genetlink_uninit();
+    dacs_dev_uninit();
     return;
 }
 
